@@ -13,6 +13,8 @@ from rag.retrieval.embeddings import EmbeddingModel
 
 
 class HybridRetriever:
+    """Hybrid retrieval system: BM25 + FAISS + Cross-Encoder reranking."""
+
     def __init__(
         self,
         embedding_model: EmbeddingModel,
@@ -32,6 +34,7 @@ class HybridRetriever:
         self.reranker = CrossEncoder(reranker_model, device="cpu")
 
     def build_index(self, chunks: List[TextChunk]) -> None:
+        """Build BM25 + FAISS indexes from chunks."""
         self.chunks = chunks
         texts = [c.text for c in chunks]
         self._chunk_id_to_idx = {id(c): i for i, c in enumerate(chunks)}
@@ -43,6 +46,7 @@ class HybridRetriever:
         embeddings = np.array(
             self.embedding_model.embed_batch(texts), dtype="float32"
         )
+
         self.dimension = embeddings.shape[1]
 
         self.index = faiss.IndexHNSWFlat(
@@ -53,10 +57,11 @@ class HybridRetriever:
         self.index.add(embeddings)
 
     def add_chunks(self, new_chunks: List[TextChunk]) -> None:
+        """Incrementally update retrieval indexes with new chunks."""
         if self.index is None:
-            return self.build_index(new_chunks)
+            self.build_index(new_chunks)
+            return
 
-        texts = [c.text for c in new_chunks]
         offset = len(self.chunks)
 
         for i, c in enumerate(new_chunks):
@@ -64,16 +69,15 @@ class HybridRetriever:
 
         self.chunks.extend(new_chunks)
 
-        all_texts = [c.text for c in self.chunks]
-        tokens = bm25s.tokenize(all_texts, stopwords="en")
+        tokens = bm25s.tokenize([c.text for c in self.chunks], stopwords="en")
         self.bm25 = bm25s.BM25()
         self.bm25.index(tokens)
 
-        embs = np.array(
-            self.embedding_model.embed_batch(texts), dtype="float32"
+        embeddings = np.array(
+            self.embedding_model.embed_batch([c.text for c in new_chunks]),
+            dtype="float32",
         )
-        self.index.add(embs)
-
+        self.index.add(embeddings)
 
     def search(
         self,
@@ -82,10 +86,15 @@ class HybridRetriever:
         candidate_k: int = 30,
         rerank: bool = True,
     ) -> List[Tuple[TextChunk, float]]:
+        """Hybrid search with optional reranking."""
+
         if not self.chunks:
             return []
 
-        q_emb = np.array([self.embedding_model.embed_text(query)], dtype="float32")
+        q_emb = np.array(
+            [self.embedding_model.embed_text(query)],
+            dtype="float32",
+        )
         q_tokens = bm25s.tokenize([query], stopwords="en")
 
         _, faiss_idx = self.index.search(q_emb, candidate_k)
@@ -96,7 +105,7 @@ class HybridRetriever:
         )
         bm25_idx = bm25_res[0]
 
-        rrf: dict[int, float] = defaultdict(float)
+        rrf = defaultdict(float)
         k = 60
 
         for r, idx in enumerate(faiss_idx):
@@ -109,13 +118,10 @@ class HybridRetriever:
         candidates = sorted(rrf.items(), key=lambda x: x[1], reverse=True)
 
         if not rerank:
-            return [
-                (self.chunks[idx], float(score))
-                for idx, score in candidates[:top_k]
-            ]
+            return [(self.chunks[i], float(s)) for i, s in candidates[:top_k]]
 
         rerank_pool = candidates[: self.rerank_top_n]
-        pairs = [(query, self.chunks[idx].text) for idx, _ in rerank_pool]
+        pairs = [(query, self.chunks[i].text) for i, _ in rerank_pool]
 
         scores = self.reranker.predict(
             pairs,
@@ -130,13 +136,9 @@ class HybridRetriever:
         )
 
         return [
-            (self.chunks[idx], float(score))
-            for (idx, _), score in reranked[:top_k]
+            (self.chunks[i], float(score))
+            for (i, _), score in reranked[:top_k]
         ]
-
-
-    def chunk_index(self, chunk: TextChunk) -> int:
-        return self._chunk_id_to_idx[id(chunk)]
 
     @property
     def is_built(self) -> bool:

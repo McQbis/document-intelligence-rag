@@ -7,7 +7,7 @@ from sentence_transformers import SentenceTransformer
 
 
 class EmbeddingModel:
-
+    """Wrapper over SentenceTransformer providing normalized embeddings for retrieval."""
     def __init__(
         self,
         model_name: str = "BAAI/bge-base-en-v1.5",
@@ -22,6 +22,7 @@ class EmbeddingModel:
 
 
     def embed_text(self, text: str) -> np.ndarray:
+        """Encode single text into normalized embedding vector."""
         return self.model.encode(
             text,
             normalize_embeddings=True,
@@ -32,6 +33,7 @@ class EmbeddingModel:
 
 
     def embed_batch(self, texts: List[str]) -> np.ndarray:
+        """Encode batch of texts into normalized embedding matrix."""
         return self.model.encode(
             texts,
             batch_size=self.batch_size,
