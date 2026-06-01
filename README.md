@@ -18,3 +18,9 @@ pip install -e .
 pip install -e ".[dev]"
 pytest
 ```
+
+## Evaluation
+
+```
+python scripts/evaluate.py --dataset scifact --router deep
+```
