@@ -5,6 +5,7 @@ from typing import List, Union
 
 from rag.ingestion.base import TextChunk
 from rag.ingestion.text import TextLoader
+from rag.ingestion.markdown import MarkdownLoader
 
 
 SUPPORTED_EXTENSIONS = {".pdf", ".md", ".txt"}
@@ -15,9 +16,9 @@ class IngestionPipeline:
         self.chunk_size = chunk_size
         self.overlap = overlap
 
-        # TODO: Add PDFLoader and MarkdownLoader
+        # TODO: add PDFLoader when implemented
         # self._pdf = PDFLoader(chunk_size, overlap)
-        # self._md = MarkdownLoader(chunk_size, overlap)
+        self._md = MarkdownLoader(chunk_size, overlap)
         self._txt = TextLoader(chunk_size, overlap)
 
 
@@ -57,7 +58,6 @@ class IngestionPipeline:
         source: str = "raw",
         file_type: str = "txt",
     ) -> List[TextChunk]:
-        """Chunk a raw string without file I/O."""
         from rag.ingestion.chunker import chunk_text
 
         return chunk_text(
