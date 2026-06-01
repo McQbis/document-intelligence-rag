@@ -10,3 +10,8 @@ dependencies = [
     "bm25s>=0.1.10",
     "sentence-transformers>=2.6.0",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+]

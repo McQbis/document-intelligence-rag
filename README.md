@@ -11,3 +11,10 @@ source .venv/bin/activate   # Linux / Mac
 # .venv\Scripts\activate    # Windows
 pip install -e .
 ```
+
+## Testing
+
+```
+pip install -e ".[dev]"
+pytest
+```
