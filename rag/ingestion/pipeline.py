@@ -6,6 +6,7 @@ from typing import List, Union
 from rag.ingestion.base import TextChunk
 from rag.ingestion.text import TextLoader
 from rag.ingestion.markdown import MarkdownLoader
+from rag.ingestion.pdf import PDFLoader
 
 
 SUPPORTED_EXTENSIONS = {".pdf", ".md", ".txt"}
@@ -16,8 +17,7 @@ class IngestionPipeline:
         self.chunk_size = chunk_size
         self.overlap = overlap
 
-        # TODO: add PDFLoader when implemented
-        # self._pdf = PDFLoader(chunk_size, overlap)
+        self._pdf = PDFLoader(chunk_size, overlap)
         self._md = MarkdownLoader(chunk_size, overlap)
         self._txt = TextLoader(chunk_size, overlap)
 
