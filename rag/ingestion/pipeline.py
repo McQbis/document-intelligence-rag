@@ -38,15 +38,15 @@ class IngestionPipeline:
         return loader.load(str(path))
 
     def process_many(self, file_paths: List[Union[str, Path]]) -> List[TextChunk]:
-        chunks: List[TextChunk] = []
+        all_chunks: List[TextChunk] = []
 
         for fp in file_paths:
             try:
-                chunks.extend(self.process(fp))
+                all_chunks.extend(self.process(fp))
             except ValueError:
                 continue
 
-        return chunks
+        return all_chunks
 
     def process_raw(
         self,

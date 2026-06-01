@@ -5,4 +5,13 @@ requires-python = ">=3.10"
 
 dependencies = [
     "pypdf>=4.0.0",
+    "numpy>=1.26.0",
+    "faiss-cpu>=1.7.4",
+    "bm25s>=0.1.10",
+    "sentence-transformers>=2.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
 ]
