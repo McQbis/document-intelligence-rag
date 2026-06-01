@@ -4,6 +4,7 @@ from enum import Enum
 from typing import List, Optional, Tuple
 
 from rag.ingestion.base import TextChunk
+from rag.cache.query_cache import QueryCache
 from rag.retrieval.retriever import HybridRetriever
 
 
@@ -27,11 +28,12 @@ class QueryRouter:
     def __init__(
         self,
         retriever: HybridRetriever,
+        cache: Optional[QueryCache] = None,
         top_k: int = 10,
         candidate_k: int = 30,
     ):
-        # TODO: add cache for recent queries and their resolved modes (LRU, 100 entries?) to skip rerunning heuristics
         self.retriever = retriever
+        self.cache = cache
         self.top_k = top_k
         self.candidate_k = candidate_k
 
@@ -47,6 +49,10 @@ class QueryRouter:
         _top_k = top_k or self.top_k
         _cand_k = candidate_k or self.candidate_k
         use_rerank = (resolved_mode == RouteMode.DEEP)
+
+        if not use_rerank and self.cache is not None:
+            results, _ = self.cache.search(query, top_k=_top_k, candidate_k=_cand_k)
+            return results
 
         return self.retriever.search(
             query, top_k=_top_k, candidate_k=_cand_k, rerank=use_rerank
