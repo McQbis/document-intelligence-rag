@@ -219,3 +219,7 @@ __marimo__/
 
 # BEIR datasets
 beir-data/
+
+# Models
+models/
+checkpoints/

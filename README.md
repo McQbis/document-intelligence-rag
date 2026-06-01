@@ -19,8 +19,14 @@ pip install -e ".[dev]"
 pytest
 ```
 
-## Evaluation
+## Evaluation (BEIR)
 
 ```
 python scripts/evaluate.py --dataset scifact --router deep
+```
+
+## Finetuning (offline)
+
+```bash
+python scripts/finetune.py --dataset fiqa --output-dir models/finetuned
 ```

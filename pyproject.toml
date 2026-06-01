@@ -15,4 +15,8 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
     "beir>=2.0.0",
+    "accelerate>=1.1.0",
 ]
+
+[tool.setuptools]
+packages = ["rag", "models"]
