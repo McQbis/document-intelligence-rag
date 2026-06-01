@@ -9,6 +9,8 @@ from tqdm import tqdm
 
 @dataclass
 class EvalResults:
+    """BEIR evaluation summary for a single dataset/split."""
+
     dataset: str
     split: str
     top_k: int
@@ -95,6 +97,7 @@ class BEIREvaluator:
                 continue
             evaluated += 1
 
+            # instruction-style prefix improves embedding models (e.g., BGE)
             prefixed = self.query_prefix + query_text
             results = self._search(prefixed, top_k=top_k)
             retrieved = [chunk_to_doc[id(chunk)] for chunk, _ in results]
@@ -127,6 +130,8 @@ class BEIREvaluator:
 
     @staticmethod
     def _corpus_to_chunks(corpus: dict):
+        """Convert BEIR corpus into unified chunk format."""
+
         class _Chunk:
             def __init__(self, text: str):
                 self.text = text

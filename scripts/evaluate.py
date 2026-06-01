@@ -2,6 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
+# allow running script without installing package
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from rag.retrieval.embeddings import EmbeddingModel
@@ -48,6 +49,7 @@ def build_retriever(args):
     print(f"[eval] Retriever   : QueryRouter (mode={args.router})")
 
     class _ForcedRouter:
+        # Adapter forcing a fixed routing strategy for evaluation
         def __init__(self, router, mode):
             self._router = router
             self._mode = mode

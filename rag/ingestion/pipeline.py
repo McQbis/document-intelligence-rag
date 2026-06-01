@@ -17,7 +17,7 @@ SUPPORTED = {
 
 
 class IngestionPipeline:
-    """Unified document ingestion → TextChunk pipeline."""
+    """Unified document ingestion -> TextChunk pipeline."""
 
     def __init__(self, chunk_size: int = 400, overlap: int = 80):
         self.chunk_size = chunk_size

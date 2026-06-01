@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass
 class FinetuneConfig:
-    """All hyperparameters in one place."""
+    """Hyperparameters for bi-encoder fine-tuning."""
 
     base_model: str = "BAAI/bge-base-en-v1.5"
     output_dir: str = "models/finetuned"
@@ -37,6 +37,8 @@ class BiEncoderTrainer:
         os.makedirs(cfg.output_dir, exist_ok=True)
 
         corpus, queries, qrels = self._load_beir(cfg.dataset, cfg.split)
+
+        # dataset statistics (useful for debugging training scale)
         print(f"[finetune] corpus={len(corpus):,}  queries={len(queries):,}")
 
         examples = self._build_examples(corpus, queries, qrels, cfg.negatives_per_positive)
@@ -59,7 +61,6 @@ class BiEncoderTrainer:
             show_progress_bar=True,
         )
 
-        print(f"[finetune] Model saved → {cfg.output_dir}")
         return cfg.output_dir
 
 
@@ -105,12 +106,12 @@ class BiEncoderTrainer:
                     continue
                 pos_text = self._doc_text(corpus[pos_id])
 
-                # Sample random negatives (simple; swap for BM25 hard negatives if needed)
+                # naive negative sampling (replace with hard negatives for better performance)
                 neg_pool = [d for d in doc_ids if d not in rel_ids]
                 negatives = random.sample(neg_pool, min(negatives_per_pos, len(neg_pool)))
                 neg_texts = [self._doc_text(corpus[n]) for n in negatives]
 
-                # MNRL format: [query, positive, neg1, neg2, ...]
+                # MultipleNegativesRankingLoss format: [query, positive, negatives...]
                 examples.append(
                     InputExample(texts=[query_text, pos_text] + neg_texts)
                 )

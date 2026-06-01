@@ -2,6 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
+# allow running without package install
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from rag.finetuning.trainer import BiEncoderTrainer, FinetuneConfig
@@ -25,6 +26,7 @@ def parse_args():
 def main():
     args = parse_args()
 
+    # CLI -> training config mapping
     cfg = FinetuneConfig(
         base_model=args.base_model,
         output_dir=args.output_dir,
