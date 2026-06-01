@@ -6,10 +6,11 @@ from typing import List
 from rag.ingestion.base import TextChunk
 
 
+_WS_RE = re.compile(r"\s+")
+
+
 def clean_text(text: str) -> str:
-    text = text.replace("\n", " ").replace("\t", " ")
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    return _WS_RE.sub(" ", text).replace("\n", " ").replace("\t", " ").strip()
 
 
 def chunk_text(
@@ -18,34 +19,24 @@ def chunk_text(
     page: int,
     file_type: str,
     chunk_size: int = 400,
-    overlap: int = 150,
+    overlap: int = 80,
     clean: bool = True,
 ) -> List[TextChunk]:
-    if clean:
-        text = clean_text(text)
-
     if not text:
         return []
 
-    chunks: List[TextChunk] = []
-    start = 0
-    chunk_index = 0
+    if clean:
+        text = clean_text(text)
 
-    while start < len(text):
-        end = start + chunk_size
-        chunk_str = text[start:end]
+    step = max(1, chunk_size - overlap)
 
-        chunks.append(
-            TextChunk(
-                text=chunk_str,
-                source=source,
-                page=page,
-                chunk_index=chunk_index,
-                file_type=file_type,
-            )
+    return [
+        TextChunk(
+            text=text[i : i + chunk_size],
+            source=source,
+            page=page,
+            chunk_index=idx,
+            file_type=file_type,
         )
-
-        chunk_index += 1
-        start += chunk_size - overlap
-
-    return chunks
+        for idx, i in enumerate(range(0, len(text), step))
+    ]

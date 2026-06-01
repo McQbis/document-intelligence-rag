@@ -8,17 +8,20 @@ from rag.ingestion.chunker import chunk_text
 
 
 class TextLoader:
-    def __init__(self, chunk_size: int = 400, overlap: int = 150):
+    """Loads plain text files and converts them into TextChunks."""
+
+    def __init__(self, chunk_size: int = 400, overlap: int = 80):
         self.chunk_size = chunk_size
         self.overlap = overlap
 
     def load(self, file_path: str) -> List[TextChunk]:
         path = Path(file_path)
-        text = path.read_text(encoding="utf-8", errors="replace")
+
+        text = path.read_text(encoding="utf-8", errors="ignore")
 
         return chunk_text(
             text=text,
-            source=file_path,
+            source=path.name,   # cleaner metadata than full path
             page=0,
             file_type="txt",
             chunk_size=self.chunk_size,

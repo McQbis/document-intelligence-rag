@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 import uuid
 
 
-@dataclass
+@dataclass(frozen=True)
 class TextChunk:
     text: str
-    source: str = ""          # file path or document title
+    source: str = ""
     page: int = 0
     chunk_index: int = 0
-    file_type: str = ""       # "pdf" | "md" | "txt"
+    file_type: str = ""
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __repr__(self) -> str:
         preview = self.text[:60].replace("\n", " ")
         return (
-            f"TextChunk(source={self.source!r}, page={self.page}, "
-            f"chunk_index={self.chunk_index}, text={preview!r}...)"
+            f"TextChunk(source={self.source}, page={self.page}, "
+            f"chunk_index={self.chunk_index}, text='{preview}...')"
         )
