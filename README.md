@@ -1,3 +1,13 @@
+---
+title: Document Intelligence RAG
+emoji: 🔍
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Document Intelligence RAG
 
 Hybrid document retrieval system combining **BM25s**, **FAISS HNSW** and **CrossEncoder reranking**, evaluated on BEIR benchmarks.
