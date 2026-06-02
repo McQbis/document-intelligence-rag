@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RAG System</title>
+<title>Document Intelligence RAG</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -267,7 +267,7 @@ footer{padding:8px 24px;border-top:1px solid var(--border);font-size:.62rem;colo
 
 <!-- HEADER -->
 <header>
-  <div class="logo"><div class="logo-pulse"></div>Document Intelligence RAG</div>
+  <div class="logo"><div class="logo-pulse"></div>RAG System</div>
   <div class="header-right">
     <div class="session-timer" id="timer-wrap" style="display:none">
       <span>session</span>
@@ -374,14 +374,15 @@ footer{padding:8px 24px;border-top:1px solid var(--border);font-size:.62rem;colo
     </div>
   </div>
 
+  <div class="suggested-queries" id="suggested-queries" style="display:none;padding:12px 24px 0">
+    <div class="sq-label">Try asking</div>
+  </div>
+
   <div class="results-scroll" id="results-scroll">
     <div class="state-center" id="empty-state">
       <div class="state-icon">◈</div>
       <div class="state-title">Ready to search</div>
       <div class="state-sub">Load a demo document or upload your own, then ask a question.</div>
-      <div class="suggested-queries" id="suggested-queries" style="display:none">
-        <div class="sq-label">Try asking</div>
-      </div>
     </div>
   </div>
 </main>
@@ -648,6 +649,7 @@ async function doSearch(prefill) {
   btn.disabled = true; btn.textContent = '…';
   document.getElementById('search-status').textContent = '';
   showSkeletons(3);
+  document.getElementById('suggested-queries').style.display = 'none';
 
   const t0 = performance.now();
   try {
