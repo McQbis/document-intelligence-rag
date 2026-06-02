@@ -121,6 +121,16 @@ python scripts/evaluate.py --dataset fiqa --model models/finetuned --router deep
 
 ---
 
+## CI/CD
+ 
+Every push to `main` triggers a GitHub Actions pipeline:
+ 
+1. **Test** — runs the full test suite (`pytest tests/ -v`) with all dependencies mocked, no real models loaded
+2. **Deploy** — if tests pass, automatically pushes to HF Spaces
+Pull requests only run tests — deploy fires on merge to `main`.
+ 
+---
+
 ## Results
 
 | Dataset | Mode | Recall@10 | nDCG@10 |
