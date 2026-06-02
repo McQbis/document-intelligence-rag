@@ -5,7 +5,7 @@ from typing import Any
 import uuid
 
 
-@dataclass(frozen=True)
+@dataclass
 class TextChunk:
     text: str
     source: str = ""
