@@ -18,9 +18,12 @@ from api.session import (
 )
 from rag.routing.router import RouteMode
 
+# Built-in demo documents used for quick evaluation without uploads.
 DEMO_DOCS_DIR = Path(__file__).parent.parent / "demo_docs"
 
 router = APIRouter()
+
+# Injected during application startup.
 _manager: SessionManager | None = None
 
 
@@ -72,6 +75,7 @@ X_SESSION_ID = "x-session-id"
 
 
 async def _require_session(session_id: str | None):
+    """Resolve and validate the current user session."""
     if not session_id:
         raise HTTPException(401, "No session. Call POST /session first.")
     session = await _manager.get_session(session_id)
@@ -153,6 +157,7 @@ async def upload(
         if session.total_bytes + size > MAX_TOTAL_BYTES:
             raise HTTPException(413, f"Total upload limit exceeded. {session.bytes_remaining // 1024} KB remaining.")
 
+        # Pipeline operates on file paths, so uploads are written to a temporary file.
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
             tmp.write(content)
             tmp_path = tmp.name
@@ -294,6 +299,7 @@ async def search(
 
     resolved = session.router.classify(req.query) if mode == RouteMode.AUTO else mode
 
+    # Offload retrieval to a worker thread to avoid blocking the event loop.
     results = await asyncio.get_event_loop().run_in_executor(
         None,
         lambda: session.router.search(

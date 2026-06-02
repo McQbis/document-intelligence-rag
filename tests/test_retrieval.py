@@ -1,3 +1,13 @@
+"""
+Unit tests for ingestion + routing + retrieval logic.
+
+Covers:
+- text cleaning
+- chunking logic
+- ingestion pipeline
+- query routing (fast/deep)
+"""
+
 import sys
 from pathlib import Path
 

@@ -15,7 +15,8 @@ from api.routes import router, set_manager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    model_name    = os.getenv("EMBEDDING_MODEL", "BAAI/bge-base-en-v1.5")
+    """Load shared application resources during startup."""
+    model_name = os.getenv("EMBEDDING_MODEL", "BAAI/bge-base-en-v1.5")
     reranker_name = os.getenv("RERANKER_MODEL",  "BAAI/bge-reranker-base")
 
     print(f"[startup] Loading embedding model : {model_name}")

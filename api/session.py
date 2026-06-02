@@ -13,10 +13,10 @@ from rag.routing.router import QueryRouter
 from rag.ingestion.pipeline import IngestionPipeline
 
 
-MAX_SESSIONS        = 5
+MAX_SESSIONS = 5
 MAX_FILES_PER_SESSION = 5
-MAX_TOTAL_BYTES     = 10 * 1024 * 1024   # 10 MB per session
-SESSION_TTL_SECONDS = 15 * 60            # 15 minutes
+MAX_TOTAL_BYTES = 10 * 1024 * 1024   # 10 MB per session
+SESSION_TTL_SECONDS = 15 * 60        # 15 minutes
 
 
 @dataclass
@@ -29,6 +29,7 @@ class UploadedFile:
 
 @dataclass
 class Session:
+    """Isolated retrieval workspace owned by a single client session."""
     session_id: str
     created_at: float
     last_active: float
@@ -67,7 +68,7 @@ class Session:
 
 
 class SessionManager:
-
+    """Creates, tracks and expires active retrieval sessions."""
     def __init__(self, embedding_model: EmbeddingModel, reranker_model: str):
         self._sessions: dict[str, Session] = {}
         self._registry_lock = asyncio.Lock()
@@ -81,6 +82,7 @@ class SessionManager:
             if len(self._sessions) >= MAX_SESSIONS:
                 raise RuntimeError("server_busy")
 
+            # Each session owns an independent retrieval stack.
             retriever = HybridRetriever(
                 self._embedding_model,
                 reranker_model=self._reranker_model,

@@ -1,11 +1,18 @@
+"""
+API integration tests.
+
+Uses FastAPI AsyncClient + full mocks — no real embedding models loaded.
+Run: pytest tests/test_api.py -v
+"""
+
 from __future__ import annotations
 
 import asyncio
 import sys
 import time
 from pathlib import Path
-from typing import List
-from unittest.mock import MagicMock, patch
+from typing import List, Tuple
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
@@ -14,6 +21,10 @@ from httpx import ASGITransport, AsyncClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+
+# ======================================================================
+# Mocks
+# ======================================================================
 
 def _make_mock_chunk(text: str = "mock text", source: str = "test.txt") -> MagicMock:
     chunk = MagicMock()
@@ -84,8 +95,16 @@ class MockPipeline:
         return chunks
 
 
+# ======================================================================
+# App fixture — patches heavy dependencies before import
+# ======================================================================
+
 DEMO_DOCS_DIR = Path(__file__).resolve().parents[1] / "demo_docs"
 
+
+# ======================================================================
+# App fixture — patches heavy dependencies before import
+# ======================================================================
 
 @pytest.fixture(scope="function")
 def app():
@@ -136,12 +155,20 @@ def hdrs(session_id: str) -> dict:
     return {"x-session-id": session_id}
 
 
+# ======================================================================
+# Health
+# ======================================================================
+
 @pytest.mark.asyncio
 async def test_health(client):
     r = await client.get("/api/health")
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
 
+
+# ======================================================================
+# Session lifecycle
+# ======================================================================
 
 @pytest.mark.asyncio
 async def test_create_session_returns_id(client):
@@ -216,6 +243,10 @@ async def test_expired_session_returns_410(client):
     r2 = await client.get("/api/session/status", headers=hdrs(sid))
     assert r2.status_code == 410
 
+
+# ======================================================================
+# Upload
+# ======================================================================
 
 @pytest.mark.asyncio
 async def test_upload_txt(client, session):
@@ -297,6 +328,10 @@ async def test_upload_without_session(client):
     assert r.status_code == 401
 
 
+# ======================================================================
+# Demo docs
+# ======================================================================
+
 @pytest.mark.asyncio
 async def test_demo_list(client):
     r = await client.get("/api/demo/list")
@@ -360,6 +395,10 @@ async def test_demo_queries_after_load(client, session):
     # rag_overview.md and transformer_overview.md both have hardcoded queries
     assert len(r.json()["queries"]) >= 0  # 0 if unknown filename, >0 for known
 
+
+# ======================================================================
+# Search
+# ======================================================================
 
 @pytest.mark.asyncio
 async def test_search_without_index_returns_400(client, session):
