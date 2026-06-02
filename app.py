@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="RAG System", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="Document Intelligence RAG", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,6 +44,6 @@ app.include_router(router, prefix="/api")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# @app.get("/")
-# def root():
-#     return FileResponse("static/index.html")
+@app.get("/")
+def root():
+    return FileResponse("static/index.html")
