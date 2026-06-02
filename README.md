@@ -84,6 +84,8 @@ pip install -e ".[dev]"
 
 A live demo is available on Hugging Face Spaces. Upload your own PDF, MD, or TXT files and query them with fast or deep retrieval mode.
 
+👉 https://huggingface.co/spaces/McQbis/document-intelligence-rag
+
 ---
 
 ## Testing
@@ -117,6 +119,16 @@ python scripts/finetune.py --dataset fiqa --output-dir models/finetuned
 python scripts/evaluate.py --dataset fiqa --model models/finetuned --router deep
 ```
 
+---
+
+## CI/CD
+ 
+Every push to `main` triggers a GitHub Actions pipeline:
+ 
+1. **Test** — runs the full test suite (`pytest tests/ -v`) with all dependencies mocked, no real models loaded
+2. **Deploy** — if tests pass, automatically pushes to HF Spaces
+Pull requests only run tests — deploy fires on merge to `main`.
+ 
 ---
 
 ## Results
