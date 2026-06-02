@@ -2,17 +2,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# System deps for building native extensions (faiss-cpu, numpy)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies via pyproject.toml (no dev extras)
-COPY pyproject.toml .
-RUN pip install --no-cache-dir -e .
-
-# Copy app
+# Copy everything first (editable install needs the actual package dirs)
 COPY . .
+
+# Install dependencies via pyproject.toml (no dev extras)
+RUN pip install --no-cache-dir -e .
 
 # HF Spaces runs as non-root
 RUN useradd -m -u 1000 user
