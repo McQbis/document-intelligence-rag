@@ -84,6 +84,8 @@ pip install -e ".[dev]"
 
 A live demo is available on Hugging Face Spaces. Upload your own PDF, MD, or TXT files and query them with fast or deep retrieval mode.
 
+👉 https://huggingface.co/spaces/McQbis/document-intelligence-rag
+
 ---
 
 ## Testing
