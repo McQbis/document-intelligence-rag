@@ -362,8 +362,17 @@ footer{padding:8px 24px;border-top:1px solid var(--border);font-size:.62rem;colo
         <input type="number" class="topk-input" id="top-k" value="8" min="1" max="20">
         <span>results</span>
       </div>
+      <label class="ask-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+        <input type="checkbox" id="ask-llm-toggle">
+        <span>Generate answer (LLM, via Groq)</span>
+      </label>
       <span id="search-status" style="color:var(--text3)"></span>
     </div>
+  </div>
+
+  <div class="answer-block" id="answer-block" style="display:none;margin:0 24px 0;padding:14px 16px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg2)">
+    <div style="font-size:.67rem;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">LLM answer · <span id="answer-mode-badge"></span></div>
+    <div id="answer-text" style="font-size:.92rem;line-height:1.55;white-space:pre-wrap"></div>
   </div>
 
   <div class="error-banner" id="error-banner">
@@ -645,32 +654,47 @@ async function doSearch(prefill) {
   if (!sessionId) return toast('No active session.', 'err');
 
   const topK = parseInt(document.getElementById('top-k').value) || 8;
+  const useLLM = document.getElementById('ask-llm-toggle').checked;
   const btn = document.getElementById('search-btn');
   btn.disabled = true; btn.textContent = '…';
   document.getElementById('search-status').textContent = '';
+  document.getElementById('answer-block').style.display = 'none';
   showSkeletons(3);
   document.getElementById('suggested-queries').style.display = 'none';
 
+  const endpoint = useLLM ? 'ask' : 'search';
   const t0 = performance.now();
   try {
-    const r = await fetch(`${API}/search`, {
+    const r = await fetch(`${API}/${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(sessionId ? {"x-session-id": sessionId} : {}) },
       body: JSON.stringify({ query, mode: currentMode, top_k: topK, candidate_k: 30 }),
     });
     const d = await r.json();
-    if (!r.ok) throw new Error(d.detail || 'Search failed');
+    if (!r.ok) throw new Error(d.detail || (useLLM ? 'Ask failed' : 'Search failed'));
     const ms = Math.round(performance.now() - t0);
     queryCount++;
     setStat('s-queries', queryCount);
     document.getElementById('search-status').textContent = `${ms} ms · ${d.resolved_mode} mode`;
-    renderResults(d);
+    if (useLLM) {
+      renderAnswer(d);
+      renderResults({ query: d.query, resolved_mode: d.resolved_mode, results: d.sources });
+    } else {
+      renderResults(d);
+    }
   } catch(e) {
     toast(e.message, 'err');
     showEmpty();
   } finally {
     btn.disabled = false; btn.textContent = 'Search';
   }
+}
+
+function renderAnswer(data) {
+  const block = document.getElementById('answer-block');
+  document.getElementById('answer-mode-badge').textContent = `${data.resolved_mode} mode · ${data.sources.length} sources`;
+  document.getElementById('answer-text').textContent = data.answer;
+  block.style.display = 'block';
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -16,6 +16,7 @@ from api.session import (
     SESSION_TTL_SECONDS,
     UploadedFile,
 )
+from rag.generation import AnswerGenerator
 from rag.routing.router import RouteMode
 
 # Built-in demo documents used for quick evaluation without uploads.
@@ -25,11 +26,17 @@ router = APIRouter()
 
 # Injected during application startup.
 _manager: SessionManager | None = None
+_generator: AnswerGenerator | None = None
 
 
 def set_manager(m: SessionManager) -> None:
     global _manager
     _manager = m
+
+
+def set_generator(g: AnswerGenerator) -> None:
+    global _generator
+    _generator = g
 
 
 
@@ -68,6 +75,21 @@ class SessionStatus(BaseModel):
     seconds_remaining: int
     active_sessions: int
     max_sessions: int
+
+
+class AskRequest(BaseModel):
+    query: str
+    mode: str = "auto"
+    top_k: int = 6
+    candidate_k: int = 30
+
+
+class AskResponse(BaseModel):
+    query: str
+    mode: str
+    resolved_mode: str
+    answer: str
+    sources: list[ChunkResult]
 
 
 
@@ -318,6 +340,80 @@ async def search(
         resolved_mode=resolved.value,
         cache_hit=False,
         results=[
+            ChunkResult(
+                text=chunk.text,
+                source=chunk.source,
+                page=chunk.page,
+                score=round(score, 4),
+                chunk_index=chunk.chunk_index,
+            )
+            for chunk, score in results
+        ],
+    )
+
+
+@router.post("/ask", response_model=AskResponse)
+async def ask(
+    req: AskRequest,
+    session_id: Annotated[str | None, Header(alias=X_SESSION_ID)] = None,
+):
+    """End-to-end RAG: retrieval (+ optional reranker) -> LangChain orchestration -> Groq LLM.
+
+    `mode` controls the retrieval strategy exactly like /search:
+      - "fast": hybrid retrieval (BM25 + dense + RRF), no reranker
+      - "deep": hybrid retrieval + cross-encoder reranker
+      - "auto": router decides based on the query
+    The same LangChain chain is used regardless of mode; only the chunks
+    fed into it change, which is what makes the reranker on/off split
+    meaningful for the orchestration layer rather than cosmetic.
+    """
+    session = await _require_session(session_id)
+
+    if not session.retriever.is_built:
+        raise HTTPException(400, "No documents indexed yet. Upload a file or load a demo document first.")
+
+    try:
+        mode = RouteMode(req.mode)
+    except ValueError:
+        raise HTTPException(400, f"Invalid mode '{req.mode}'. Use: auto, fast, deep.")
+
+    if _generator is None or not _generator.is_configured:
+        raise HTTPException(
+            503,
+            "LLM generation is not configured on this server (missing GROQ_API_KEY). "
+            "Use /api/search for retrieval-only results.",
+        )
+
+    resolved = session.router.classify(req.query) if mode == RouteMode.AUTO else mode
+
+    results = await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: session.router.search(
+            req.query,
+            mode=mode,
+            top_k=req.top_k,
+            candidate_k=req.candidate_k,
+        ),
+    )
+
+    if not results:
+        raise HTTPException(404, "No relevant passages found for this query.")
+
+    try:
+        answer = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: _generator.generate(req.query, results)
+        )
+    except RuntimeError as e:
+        raise HTTPException(503, str(e))
+
+    session.query_count += 1
+
+    return AskResponse(
+        query=req.query,
+        mode=req.mode,
+        resolved_mode=resolved.value,
+        answer=answer,
+        sources=[
             ChunkResult(
                 text=chunk.text,
                 source=chunk.source,
