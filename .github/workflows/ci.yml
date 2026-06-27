@@ -42,5 +42,11 @@ jobs:
         run: |
           git config user.email "ci@github.com"
           git config user.name "GitHub Actions"
+          git lfs install --local
+
+          git checkout --orphan hf-deploy
+          git add -A
+          git commit -m "Deploy snapshot $(git rev-parse --short HEAD~0 2>/dev/null || echo manual)"
+
           git remote add hf https://McQbis:$HF_TOKEN@huggingface.co/spaces/McQbis/document-intelligence-rag
-          git push hf main --force
+          git push hf hf-deploy:main --force
