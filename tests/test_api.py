@@ -490,3 +490,130 @@ async def test_search_without_session(client):
         json={"query": "test"},
     )
     assert r.status_code == 401
+
+
+# ======================================================================
+# Ask (retrieval + LangChain/Groq generation)
+# ======================================================================
+
+@pytest.mark.asyncio
+async def test_ask_without_generator_configured_returns_503(client, session):
+    """If no AnswerGenerator was injected (e.g. no GROQ_API_KEY at startup),
+    /api/ask must fail gracefully instead of 500ing, and /api/search must
+    keep working independently of this."""
+    r = await client.get("/api/demo/list")
+    filename = r.json()["docs"][0]["filename"]
+    await client.post(f"/api/demo/load/{filename}", headers=hdrs(session))
+
+    r = await client.post(
+        "/api/ask",
+        headers=hdrs(session),
+        json={"query": "What is RAG?", "mode": "auto"},
+    )
+    assert r.status_code == 503
+    assert "GROQ_API_KEY" in r.json()["detail"]
+
+    # Retrieval-only endpoint is unaffected.
+    r2 = await client.post(
+        "/api/search",
+        headers=hdrs(session),
+        json={"query": "What is RAG?", "mode": "auto"},
+    )
+    assert r2.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_ask_without_index_returns_400(client, session):
+    r = await client.post(
+        "/api/ask",
+        headers=hdrs(session),
+        json={"query": "hello", "mode": "auto"},
+    )
+    assert r.status_code == 400
+    assert "No documents" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_ask_returns_answer_and_sources(client, session):
+    """With a mocked generator wired in, /api/ask should orchestrate
+    retrieval (+ optional reranker) and the LLM call, and surface both
+    the answer and the chunks it was grounded on."""
+    import api.routes as routes_mod
+
+    class MockGenerator:
+        is_configured = True
+
+        def generate(self, query, results):
+            return f"Mock answer for '{query}' using {len(results)} source(s)."
+
+    routes_mod.set_generator(MockGenerator())
+
+    r = await client.get("/api/demo/list")
+    filename = r.json()["docs"][0]["filename"]
+    await client.post(f"/api/demo/load/{filename}", headers=hdrs(session))
+
+    r = await client.post(
+        "/api/ask",
+        headers=hdrs(session),
+        json={"query": "What is RAG?", "mode": "deep", "top_k": 3},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["query"] == "What is RAG?"
+    assert data["mode"] == "deep"
+    assert "answer" in data and data["answer"].startswith("Mock answer")
+    assert "sources" in data and len(data["sources"]) >= 1
+    assert "text" in data["sources"][0]
+    assert "source" in data["sources"][0]
+
+
+@pytest.mark.asyncio
+async def test_ask_invalid_mode(client, session):
+    r = await client.get("/api/demo/list")
+    filename = r.json()["docs"][0]["filename"]
+    await client.post(f"/api/demo/load/{filename}", headers=hdrs(session))
+
+    r = await client.post(
+        "/api/ask",
+        headers=hdrs(session),
+        json={"query": "test", "mode": "turbo"},
+    )
+    assert r.status_code == 400
+    assert "Invalid mode" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_ask_handles_generation_error_cleanly(client, session):
+    """If the Groq call itself fails (rate limit, auth, etc.), /api/ask must
+    surface a clean, typed error instead of a bare 500."""
+    import api.routes as routes_mod
+    from rag.generation import GenerationError
+
+    class MockGeneratorRateLimited:
+        is_configured = True
+
+        def generate(self, query, results):
+            raise GenerationError(429, "Groq API rate limit reached (free-tier quota exceeded).")
+
+    routes_mod.set_generator(MockGeneratorRateLimited())
+
+    r = await client.get("/api/demo/list")
+    filename = r.json()["docs"][0]["filename"]
+    await client.post(f"/api/demo/load/{filename}", headers=hdrs(session))
+
+    r = await client.post(
+        "/api/ask",
+        headers=hdrs(session),
+        json={"query": "What is RAG?", "mode": "auto"},
+    )
+    assert r.status_code == 429
+    assert "rate limit" in r.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_ask_without_session(client):
+    r = await client.post(
+        "/api/ask",
+        json={"query": "test"},
+    )
+    assert r.status_code == 401
