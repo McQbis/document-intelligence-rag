@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import List, Tuple
 
+import groq
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable, RunnableLambda
@@ -57,6 +58,19 @@ def build_answer_chain(llm: Runnable) -> Runnable:
     )
 
 
+class GenerationError(Exception):
+    """Raised when the LLM call itself fails (rate limit, quota, Groq outage,
+    etc.) — distinct from RuntimeError, which means 'not configured at all'.
+    Carries an HTTP-style status_code so the API layer can return a clean
+    response instead of a bare 500.
+    """
+
+    def __init__(self, status_code: int, message: str):
+        super().__init__(message)
+        self.status_code = status_code
+        self.message = message
+
+
 class AnswerGenerator:
     """Thin wrapper around the LangChain answer chain.
 
@@ -86,4 +100,23 @@ class AnswerGenerator:
 
     def generate(self, query: str, results: List[Tuple[TextChunk, float]]) -> str:
         chain = self._get_chain()
-        return chain.invoke({"question": query, "results": results})
+        try:
+            return chain.invoke({"question": query, "results": results})
+        except groq.RateLimitError as e:
+            # Free-tier requests/tokens-per-minute or per-day limit exceeded.
+            raise GenerationError(
+                429,
+                "Groq API rate limit reached (free-tier quota exceeded). "
+                "Try again in a moment, or use retrieval-only results.",
+            ) from e
+        except groq.AuthenticationError as e:
+            raise GenerationError(
+                401,
+                "Groq API key was rejected (invalid or revoked).",
+            ) from e
+        except groq.APIStatusError as e:
+            # Any other non-2xx response from Groq (bad request, 5xx, etc.)
+            raise GenerationError(
+                e.status_code or 502,
+                f"Groq API error: {e.message or str(e)}",
+            ) from e

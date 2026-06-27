@@ -16,7 +16,7 @@ from api.session import (
     SESSION_TTL_SECONDS,
     UploadedFile,
 )
-from rag.generation import AnswerGenerator
+from rag.generation import AnswerGenerator, GenerationError
 from rag.routing.router import RouteMode
 
 # Built-in demo documents used for quick evaluation without uploads.
@@ -403,6 +403,8 @@ async def ask(
         answer = await asyncio.get_event_loop().run_in_executor(
             None, lambda: _generator.generate(req.query, results)
         )
+    except GenerationError as e:
+        raise HTTPException(e.status_code, e.message)
     except RuntimeError as e:
         raise HTTPException(503, str(e))
 
