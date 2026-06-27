@@ -4,6 +4,7 @@ import os
 from typing import List, Tuple
 
 import groq
+import httpx
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable, RunnableLambda
@@ -84,8 +85,17 @@ class AnswerGenerator:
         self._chain: Runnable | None = None
 
     @property
+    def _api_key(self) -> str | None:
+        # Defensive: a trailing newline/space in the secret (easy to paste by
+        # accident, e.g. into HF Spaces' secret field) turns into an invalid
+        # HTTP header value ("Bearer <key>\n") and fails with a confusing
+        # httpcore.LocalProtocolError instead of a clean auth error.
+        raw = os.getenv("GROQ_API_KEY")
+        return raw.strip() if raw else None
+
+    @property
     def is_configured(self) -> bool:
-        return bool(os.getenv("GROQ_API_KEY"))
+        return bool(self._api_key)
 
     def _get_chain(self) -> Runnable:
         if self._chain is None:
@@ -94,7 +104,11 @@ class AnswerGenerator:
                     "GROQ_API_KEY is not set. Generation is disabled; "
                     "/api/search (retrieval-only) still works."
                 )
-            llm = ChatGroq(model=self._model_name, temperature=self._temperature)
+            llm = ChatGroq(
+                model=self._model_name,
+                temperature=self._temperature,
+                api_key=self._api_key,
+            )
             self._chain = build_answer_chain(llm)
         return self._chain
 
@@ -107,7 +121,7 @@ class AnswerGenerator:
             raise GenerationError(
                 429,
                 "Groq API rate limit reached (free-tier quota exceeded). "
-                "Try again in a moment, or use retrieval-only results.",
+                "Try again in a moment, or use for retrieval-only results.",
             ) from e
         except groq.AuthenticationError as e:
             raise GenerationError(
@@ -119,4 +133,15 @@ class AnswerGenerator:
             raise GenerationError(
                 e.status_code or 502,
                 f"Groq API error: {e.message or str(e)}",
+            ) from e
+        except (httpx.LocalProtocolError, groq.APIConnectionError) as e:
+            # Catches malformed request errors before Groq even responds —
+            # e.g. a stray newline/whitespace in GROQ_API_KEY turning the
+            # Authorization header into an invalid value. We strip the key
+            # defensively above, but this is a safety net in case some other
+            # env var or header ends up malformed in the future.
+            raise GenerationError(
+                502,
+                "Could not reach Groq (malformed request or connection error). "
+                "Check that GROQ_API_KEY doesn't contain extra whitespace/newlines.",
             ) from e
