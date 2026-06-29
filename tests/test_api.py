@@ -341,6 +341,31 @@ async def test_demo_list(client):
     names = [d["filename"] for d in r.json()["docs"]]
     assert any("rag" in n for n in names)
     assert any("transformer" in n for n in names)
+    assert any(n.endswith(".png") for n in names)
+
+
+@pytest.mark.asyncio
+async def test_demo_load_ocr_image(client, session):
+    """The bundled demo image is real OCR'd via Tesseract end-to-end here
+    (no mocking) — this is what proves image ingestion actually works,
+    not just that the code is wired up."""
+    r = await client.get("/api/demo/list")
+    docs = r.json()["docs"]
+    png_doc = next((d for d in docs if d["filename"].endswith(".png")), None)
+    assert png_doc is not None, "No OCR demo image found in demo_docs/"
+
+    r = await client.post(f"/api/demo/load/{png_doc['filename']}", headers=hdrs(session))
+    assert r.status_code == 200
+    data = r.json()
+    assert data["chunks_added"] >= 1
+
+    r2 = await client.post(
+        "/api/search",
+        headers=hdrs(session),
+        json={"query": "OCR", "mode": "fast"},
+    )
+    assert r2.status_code == 200
+    assert len(r2.json()["results"]) >= 1
 
 
 @pytest.mark.asyncio
