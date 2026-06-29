@@ -170,8 +170,8 @@ async def upload(
             raise HTTPException(429, f"File limit reached ({MAX_FILES_PER_SESSION} files per session).")
 
         suffix = "." + file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
-        if suffix not in {".pdf", ".md", ".txt"}:
-            raise HTTPException(400, f"Unsupported file type '{suffix}'. Allowed: pdf, md, txt.")
+        if suffix not in {".pdf", ".md", ".txt", ".png", ".jpg", ".jpeg"}:
+            raise HTTPException(400, f"Unsupported file type '{suffix}'. Allowed: pdf, md, txt, png, jpg, jpeg.")
 
         content = await file.read()
         size = len(content)
@@ -221,7 +221,11 @@ async def upload(
 @router.get("/demo/list")
 def demo_list():
     docs = []
-    for p in sorted(DEMO_DOCS_DIR.glob("*.md")) + sorted(DEMO_DOCS_DIR.glob("*.txt")):
+    for p in (
+        sorted(DEMO_DOCS_DIR.glob("*.md"))
+        + sorted(DEMO_DOCS_DIR.glob("*.txt"))
+        + sorted(DEMO_DOCS_DIR.glob("*.png"))
+    ):
         docs.append({"filename": p.name, "size": p.stat().st_size})
     return {"docs": docs}
 
@@ -288,6 +292,10 @@ DEMO_QUERIES: dict[str, list[str]] = {
         "What are Transformer scaling laws?",
         "How are Transformers used in retrieval models?",
         "What is positional encoding?",
+    ],
+    "ocr_example.png": [
+        "What does OCR stand for?",
+        "What happens to this image before it's indexed?",
     ],
 }
 

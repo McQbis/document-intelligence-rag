@@ -21,6 +21,27 @@ Hybrid document retrieval system combining **BM25s**, **FAISS HNSW** and **Cross
 ## Architecture
 
 ```
+Ingestion
+─────────
+PDF / MD / TXT ─────────────────────────────────┐
+                                                │
+PNG / JPG                                       │
+   │                                            │
+   ▼                                            │
+Tesseract OCR ──> raw text                      │
+   │                                            │
+   ▼                                            |
+(optional, if GROQ_API_KEY)                     │
+LangChain correction chain                      │
+(cleans up OCR misreads,                        │
+same Groq model as generation)                  │
+   │                                            │
+   └────────────────────┬───────────────────────┘
+                        ▼
+                  chunk_text() ──► TextChunk[] ──► HybridRetriever index
+
+
+
 Query
   │
   ▼
@@ -215,3 +236,4 @@ Pull requests only run tests — deploy fires on merge to `main`.
 - **Chunk boundaries can cut mid-word/mid-sentence.** The chunker splits on a fixed size, not on semantic or sentence boundaries, so a retrieved passage occasionally starts or ends mid-word (e.g. "...ough fine-tuning..." instead of "...through fine-tuning..."). This doesn't affect retrieval scoring (which operates on the full chunk), but it can look slightly rough in the UI. A sentence-aware splitter (e.g. respecting `.`/`\n` boundaries) would fix this at the cost of less uniform chunk sizes.
 - **Generation is only as grounded as the retrieved context.** The LLM is instructed to answer only from the numbered passages it's given, but with `fast` mode (no reranker) the top-k context can be noisier, which can occasionally lead to thinner or less precise answers than `deep` mode.
 - **No conversation memory.** Each `/api/ask` call is independent — there's no multi-turn follow-up handling (e.g. "what about its tokenizer?" referring to the previous question) yet.
+- **OCR accuracy depends on image quality.** Tesseract does reasonably well on clean, high-contrast screenshots/scans but can misread characters on low-resolution photos, skewed angles, or unusual fonts. The optional LLM correction pass fixes many of these (rejoining split words, fixing obvious misreads) but isn't guaranteed to catch everything, and is skipped entirely if `GROQ_API_KEY` isn't set.
