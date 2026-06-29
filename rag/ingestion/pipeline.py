@@ -7,12 +7,16 @@ from rag.ingestion.base import TextChunk
 from rag.ingestion.text import TextLoader
 from rag.ingestion.markdown import MarkdownLoader
 from rag.ingestion.pdf import PDFLoader
+from rag.ingestion.image import ImageLoader
 
 
 SUPPORTED = {
     ".pdf": PDFLoader,
     ".md": MarkdownLoader,
     ".txt": TextLoader,
+    ".png": ImageLoader,
+    ".jpg": ImageLoader,
+    ".jpeg": ImageLoader,
 }
 
 
