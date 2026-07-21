@@ -47,6 +47,7 @@ class QueryCache:
         query: str,
         top_k: int = 10,
         candidate_k: int = 30,
+        rerank: bool = False,
     ) -> Tuple[List[Tuple[TextChunk, float]], bool]:
         """Return cached results if possible, otherwise compute and store."""
 
@@ -67,7 +68,7 @@ class QueryCache:
             return semantic_hit, True
 
         results = self.retriever.search(
-            query, top_k=top_k, candidate_k=candidate_k
+            query, top_k=top_k, candidate_k=candidate_k, rerank=rerank
         )
 
         self._store(key, query, q_emb, results)

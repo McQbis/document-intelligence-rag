@@ -54,7 +54,7 @@ class QueryRouter:
         use_rerank = resolved_mode == RouteMode.DEEP
 
         if resolved_mode == RouteMode.FAST and self.cache:
-            results, _ = self.cache.search(query, top_k=_top_k, candidate_k=_cand_k)
+            results, _ = self.cache.search(query, top_k=_top_k, candidate_k=_cand_k, rerank=False)
             return results
 
         return self.retriever.search(
