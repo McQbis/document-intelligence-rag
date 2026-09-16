@@ -142,6 +142,21 @@ main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
 .sq-btn{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--text2);cursor:pointer;transition:all .2s;text-align:left;width:100%}
 .sq-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--accent-dim)}
 
+/* Answer block */
+#answer-text p {
+  margin: 0 0 .8rem;
+}
+
+#answer-text ol,
+#answer-text ul {
+  margin: 0 0 .8rem;
+  padding-left: 1.35rem;
+}
+
+#answer-text li {
+  padding-left: .15rem;
+}
+
 /* Results header */
 .results-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .results-meta{font-size:.7rem;color:var(--text3)}
@@ -373,7 +388,7 @@ footer{padding:8px 24px;border-top:1px solid var(--border);font-size:.62rem;colo
 
   <div class="answer-block" id="answer-block" style="display:none;margin:0 24px 0;padding:14px 16px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg2)">
     <div style="font-size:.67rem;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">LLM answer · <span id="answer-mode-badge"></span></div>
-    <div id="answer-text" style="font-size:.92rem;line-height:1.55;white-space:pre-wrap"></div>
+    <div id="answer-text" style="font-size:.92rem;line-height:1.55"></div>
   </div>
 
   <div class="error-banner" id="error-banner">
