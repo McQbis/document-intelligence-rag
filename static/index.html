@@ -236,6 +236,7 @@ footer{padding:8px 24px;border-top:1px solid var(--border);font-size:.62rem;colo
 ::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--text4)}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
@@ -693,7 +694,7 @@ async function doSearch(prefill) {
 function renderAnswer(data) {
   const block = document.getElementById('answer-block');
   document.getElementById('answer-mode-badge').textContent = `${data.resolved_mode} mode · ${data.sources.length} sources`;
-  document.getElementById('answer-text').textContent = data.answer;
+  document.getElementById('answer-text').innerHTML = marked.parse(data.answer);
   block.style.display = 'block';
 }
 
